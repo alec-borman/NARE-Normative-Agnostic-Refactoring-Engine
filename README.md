@@ -81,6 +81,12 @@ This repository follows a **specification‑first** development model. Code cont
 
 ---
 
+## 🛡️ Sustainability & Backing
+
+NARE is a sovereign, open‑source human‑in‑the‑loop AI orchestration tool built to bring deterministic, auditable automation to development workflows. If this architecture helps your team stay in control while leveraging LLMs, or if you want to accelerate the roadmap (including first‑class VSCode/Cursor integration and the snapshot diff‑aware planning engine), consider supporting core development directly:
+
+☕ [Support the Architect via PayPal](https://paypal.me/alecborman)
+
 ## 📄 License
 
 The NARE specification and accompanying documents are licensed under the [Apache License 2.0](./LICENSE).
