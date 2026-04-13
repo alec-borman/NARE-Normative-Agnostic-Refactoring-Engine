@@ -1,11 +1,11 @@
 # Normative Implementation Specification for NARE HITL Edition (AI Studio Builder + GitHub Integration)
 
-**Document ID:** NARE-HITL-SPEC-2.0.0  
-**Version:** 2.0.0 (Final)  
+**Document ID:** NARE-HITL-SPEC-3.0.0  
+**Version:** 3.0.0 (Revised)  
 **Status:** Approved  
 **Date:** 2026-04-13  
 **Classification:** Normative Implementation Specification  
-**Target Platform:** Cross‑platform Desktop Application (Electron + Rust Backend)  
+**Target Platform:** Cross‑platform Desktop Application (Tauri + Rust Backend)  
 
 ---
 
@@ -33,6 +33,7 @@ This document defines the complete implementation of the **NARE Human‑in‑the
 | AI-STUDIO | Google AI Studio Builder Documentation | 2026-04-01 |
 | GITHUB-API | GitHub REST API v3 | 2026-04-01 |
 | JSON-SCHEMA | JSON Schema Specification | Draft 2020-12 |
+| TAURI | Tauri Framework Documentation | v2.0 |
 
 ---
 
@@ -46,7 +47,7 @@ This document defines the complete implementation of the **NARE Human‑in‑the
 | **Tela Task** | An atomic unit of work defined by a YAML TDB. |
 | **Oracle** | The Gemini‑powered AI that decomposes Intent into Tela Tasks. |
 | **Implementer** | The AI Studio Builder agent that executes Tela Tasks and creates GitHub commits/PRs. |
-| **Package** | A plain‑text bundle containing the NARE Implementer System Instructions and one or more Tela Task YAML documents, intended for pasting into AI Studio. |
+| **Package** | A plain‑text bundle containing the NARE Implementer System Instructions (optionally) and one or more Tela Task YAML documents, intended for use with AI Studio. |
 | **Workspace** | The local Git repository managed by NARE. |
 | **Undo Stack** | A LIFO stack of reversible user actions (excluding external side effects like Git commits). |
 | **Redo Stack** | A LIFO stack of actions that have been undone and can be reapplied. |
@@ -59,8 +60,8 @@ This document defines the complete implementation of the **NARE Human‑in‑the
 
 ```mermaid
 graph TD
-    subgraph "NARE Desktop Application"
-        UI[Electron UI]
+    subgraph "NARE Desktop Application (Tauri)"
+        UI[Tauri Frontend - HTML/CSS/JS]
         Orch[Orchestrator - Rust Core]
         SMgr[Snapshot Manager]
         VS[(Vector Store)]
@@ -106,11 +107,11 @@ flowchart LR
     end
 
     subgraph Manual_Bridge
-        PackageGen -->|Clipboard / File| MB[Master Builder]
+        PackageGen -->|File Download / Clipboard| MB[Master Builder]
     end
 
     subgraph Cloud_Environment
-        MB -->|Paste into AI Studio| AIS[AI Studio Builder]
+        MB -->|Upload/Paste into AI Studio| AIS[AI Studio Builder]
         AIS -->|Commits / PRs| GitHub
     end
 
@@ -124,7 +125,7 @@ The Oracle never has access to the execution environment. The Implementer never 
 
 ## 5. User Interface Specification
 
-The UI is a single‑page Electron application with a left sidebar navigation and a main content area. All UI state is managed via Redux (or equivalent) and persisted to `~/.nare/ui_state.json` between sessions.
+The UI is a single‑page application built with Tauri, using the OS native webview. All UI state is managed via a reactive store and persisted to `~/.nare/ui_state.json` between sessions.
 
 ### 5.1 Global UI Elements
 
@@ -432,20 +433,56 @@ This is a modal/dialog that guides the Master Builder through the export process
 | :--- | :--- | :--- |
 | **Package Name** | Text input | Default: `nare_package_YYYY‑MM‑DD_HHMM`. |
 | **Include Instructions** | Checkbox | Default: checked. Includes human‑readable steps. |
-| **Include System Instructions** | Checkbox | Default: checked. Includes full NARE‑IMPL system prompt. |
+| **Include System Instructions** | Checkbox | Default: **unchecked**. The Implementer System Instructions are configured once in AI Studio and should not be resent with every package. When checked, includes the full NARE‑IMPL system prompt (useful for first‑time setup or sharing with others). |
 | **GitHub Repo URL** | Read‑only text | Displays the configured repo. |
 | **Copy to Clipboard After Generate** | Checkbox | Default: checked. Automatically copies after generation. |
+| **Payload Size Warning** | Warning banner | Appears if total package size exceeds 50,000 characters (~12,500 tokens). Recommends using **Download** instead of clipboard. |
 
 #### 5.7.3 Step 3: Preview and Export
 
 | Element | Type | Behavior |
 | :--- | :--- | :--- |
-| **Package Preview** | Read‑only text area | Shows the exact package content. Updates live as options change. |
-| **Copy Button** | Button | Copies content to clipboard. |
-| **Download Button** | Button | Saves as `.txt` file. |
+| **Package Preview** | Read‑only text area | Shows the exact package content. Updates live as options change. For large packages, content is truncated in preview with a "Show Full" button. |
+| **Copy Button** | Button | Copies content to clipboard. Disabled if size > 100,000 chars with tooltip: "Package too large for reliable clipboard transfer. Please use Download." |
+| **Download Button** | Primary button | Saves as `.txt` file. Recommended for large packages. |
 | **Done Button** | Button | Closes modal and marks exported tasks as `AWAITING_HUMAN`. Undoable (can revert status). |
 
 #### 5.7.4 Package Content Template
+
+When `Include System Instructions` is **checked** (one‑time setup):
+
+```
+===============================================================================
+NARE IMPLEMENTER PACKAGE (INCLUDES SYSTEM INSTRUCTIONS)
+Generated: {timestamp}
+Project: {repo_url}
+Tasks Included: {task_ids_comma}
+===============================================================================
+
+--- MASTER BUILDER INSTRUCTIONS ---
+1. Open Google AI Studio Builder: https://aistudio.google.com/
+2. Ensure your project is connected to the GitHub repository: {repo_url}
+3. If this is your first time using NARE with this AI Studio project, go to the "System Instructions" section and paste the content under "NARE IMPLEMENTER SYSTEM INSTRUCTIONS" below.
+4. For subsequent runs, the System Instructions are already saved; you only need to provide the Tela Tasks payload in the user prompt.
+5. In the user prompt, paste the content under "=== TELA TASKS PAYLOAD ===" (or upload this file).
+6. Run the agent. It will create commits and/or a pull request.
+7. After the run completes, review the changes and merge the PR.
+8. Return to the NARE application and click "Sync Now" to update the snapshot.
+
+===============================================================================
+=== NARE IMPLEMENTER SYSTEM INSTRUCTIONS (Configure once in AI Studio) ===
+{Copy the EXACT content of Implementer-System-Instructions.md here}
+=== END SYSTEM INSTRUCTIONS ===
+
+===============================================================================
+=== TELA TASKS PAYLOAD ===
+{For each selected task, in order:}
+{task YAML content}
+---
+===============================================================================
+```
+
+When `Include System Instructions` is **unchecked** (typical workflow):
 
 ```
 ===============================================================================
@@ -458,16 +495,10 @@ Tasks Included: {task_ids_comma}
 --- MASTER BUILDER INSTRUCTIONS ---
 1. Open Google AI Studio Builder: https://aistudio.google.com/
 2. Ensure your project is connected to the GitHub repository: {repo_url}
-3. Go to the "System Instructions" section. If you have not already configured it, paste the content under "NARE IMPLEMENTER SYSTEM INSTRUCTIONS" below.
-4. In the user prompt, enter: "Execute the Tela Tasks defined below."
-5. Run the agent. It will create commits and/or a pull request.
-6. After the run completes, review the changes and merge the PR.
-7. Return to the NARE application and click "Sync Now" to update the snapshot.
-
-===============================================================================
-=== NARE IMPLEMENTER SYSTEM INSTRUCTIONS ===
-{Copy the EXACT content of Implementer-System-Instructions.md here}
-=== END SYSTEM INSTRUCTIONS ===
+3. Paste the content under "=== TELA TASKS PAYLOAD ===" into the user prompt (or upload this file).
+4. Run the agent. It will create commits and/or a pull request.
+5. After the run completes, review the changes and merge the PR.
+6. Return to the NARE application and click "Sync Now" to update the snapshot.
 
 ===============================================================================
 === TELA TASKS PAYLOAD ===
@@ -477,7 +508,7 @@ Tasks Included: {task_ids_comma}
 ===============================================================================
 ```
 
-**Critical:** The System Instructions section is included **once** per package, not repeated per task. The Master Builder may choose to omit it if AI Studio already has the instructions saved.
+**Note:** The Implementer System Instructions are intended to be configured **once** per AI Studio project. The NARE application provides a separate menu item **Help → Copy System Instructions** to copy just the NARE‑IMPL instructions to clipboard for initial setup.
 
 ### 5.8 Logs View
 
@@ -538,8 +569,8 @@ Exports filtered logs as JSON or CSV.
 | :--- | :--- | :--- |
 | **Theme** | Dropdown | `System`, `Light`, `Dark` |
 | **Font Size** | Slider | `14px` |
-| **Show System Instructions in Package** | Checkbox | `true` |
-| **Auto‑Copy Package** | Checkbox | `true` |
+| **Default Include System Instructions** | Checkbox | `false` |
+| **Auto‑Copy Package** | Checkbox | `true` (disabled for large payloads) |
 
 **Save Button:** Persists all settings. May require application restart for some changes.
 
@@ -547,7 +578,7 @@ Exports filtered logs as JSON or CSV.
 
 ## 6. Orchestrator Specification
 
-The Orchestrator is the Rust backend that manages state, invokes external services, and communicates with the UI via JSON‑RPC over IPC.
+The Orchestrator is the Rust backend that manages state, invokes external services, and communicates with the UI via Tauri commands (IPC).
 
 ### 6.1 State Machine
 
@@ -570,7 +601,7 @@ stateDiagram-v2
 
 ### 6.2 Phase 1: Planning
 
-**RPC Method:** `orchestrator.plan(intent: string) -> PlanResult`
+**Tauri Command:** `plan(intent: String) -> Result<PlanResult, String>`
 
 **Preconditions:**
 - Snapshot status == `CURRENT`
@@ -588,7 +619,7 @@ stateDiagram-v2
 9. For each YAML block:
    - Validate against NARE Task Schema.
    - If valid, create task with unique UUID, status `PENDING`.
-   - Save to `.nare/tasks/<uuid>.yaml`.
+   - Save to `.nare/tasks/active/<uuid>.yaml`.
    - Log `TASK_CREATED` with task ID.
 10. If zero valid tasks: retry once with error clarification. On second failure, log `PLAN_FAILED` and return error.
 11. Log `PLAN_COMPLETE` with task count.
@@ -653,7 +684,7 @@ Generate a REVISED YAML Tela Task that addresses the issue. Output ONLY the revi
 
 ### 6.4 Repository Synchronization
 
-**RPC Method:** `orchestrator.sync() -> SyncResult`
+**Tauri Command:** `sync() -> Result<SyncResult, String>`
 
 **Trigger:** Manual (Sync Now button) or automatic (interval timer).
 
@@ -668,14 +699,17 @@ Generate a REVISED YAML Tela Task that addresses the issue. Output ONLY the revi
    - Run Snapshot Indexer on updated workspace (see §6.5).
    - Update `snapshot_manifest.json` with new commit SHA.
    - For each task with status `AWAITING_HUMAN`:
-     - Check if expected file changes are present (compare `expected_output.hash_after` with current file hash).
-     - If all match: set status to `COMPLETED`. Log `TASK_COMPLETED`.
+     - **Verification of Completion:** Since the Oracle cannot predict the final `hash_after`, completion is determined by:
+       1. **Hash Change Detection:** For each `target.files.path`, retrieve the current file hash from the workspace and compare with the `hash_before` recorded in the task's snapshot context. If the hash has changed, the file was modified.
+       2. **Optional Semantic Check (Future):** A lightweight local LLM call could compare the Git diff against the `intent_summary` to verify the change matches the task. In V3.0.0, this is not implemented; the Master Builder's manual review of the PR serves as final verification.
+     - If at least one target file's hash differs from its `hash_before`, set task status to `COMPLETED`. Log `TASK_COMPLETED` with task ID.
+     - If no files changed, keep status as `AWAITING_HUMAN` (the task may not have been executed yet, or the PR is still pending).
    - Log `SYNC_COMPLETE`.
 6. Push undo action that reverts to previous snapshot manifest (but not Git state, which is external).
 
 ### 6.5 Snapshot Indexer
 
-**RPC Method:** `snapshot.create() -> SnapshotResult`
+**Tauri Command:** `create_snapshot() -> Result<SnapshotResult, String>`
 
 **Procedure:**
 1. Log `INDEX_START`.
@@ -810,6 +844,7 @@ Each line is a JSON object:
 | Disk full | I/O error | Toast: "Disk full. Free space to continue." | Operation aborted. |
 | Git merge conflict | Git error | Modal with resolution steps. | User must resolve manually. |
 | AI Studio execution failure | Human reports | Task can be reset to `PENDING` or revision requested. | Use "Reset Status" button. |
+| Package too large for clipboard | Character count > 100,000 | Disable Copy button; show tooltip. | User must use Download. |
 
 ---
 
@@ -817,11 +852,11 @@ Each line is a JSON object:
 
 | Requirement | HITL Implementation Mapping |
 | :--- | :--- |
-| Air‑Gap Principle | Manual copy/paste bridge; Oracle and Implementer never communicate directly. |
+| Air‑Gap Principle | Manual file‑based bridge; Oracle and Implementer never communicate directly. |
 | Canonical Snapshot | Managed by Snapshot Manager; updated after each sync. |
 | Tela Task YAML Schema | Full validation on creation/import. |
 | Deterministic Script Execution | Relies on AI Studio Builder; user verifies. |
-| `hash_before` Verification | Not automated at actuation; user trusts AI Studio environment. |
+| `hash_before` Verification | Not automated at actuation; user trusts AI Studio environment. Completion detected via hash change on sync. |
 | Verification Block Capture | Not captured by NARE; user reviews in AI Studio. |
 | 3‑Attempt Revision Cap | Not automated; user may manually request revision via "Reset Status" and "Edit Task". |
 | Compliance Report | Replaced by GitHub PR review; NARE provides sync verification. |
@@ -829,7 +864,32 @@ Each line is a JSON object:
 
 ---
 
-## 11. Appendices
+## 11. Implementation Notes
+
+### 11.1 Tauri over Electron
+
+This specification targets **Tauri** as the application framework instead of Electron. Tauri provides:
+- Significantly smaller binary size and lower memory footprint.
+- Direct Rust‑to‑frontend communication without Node.js IPC overhead.
+- OS native webview, ensuring consistent performance and security.
+
+All UI interactions are defined as Tauri commands, which map directly to Rust functions in the Orchestrator.
+
+### 11.2 AI Studio System Instructions Setup
+
+The Implementer System Instructions are intended to be configured **once** per AI Studio project. The NARE application includes a **Help → Copy System Instructions** menu item that copies the full NARE‑IMPL system prompt to the clipboard, allowing the Master Builder to paste it into AI Studio's System Instructions field during initial project setup. Subsequent packages should **not** include the system instructions (the `Include System Instructions` checkbox defaults to `false`).
+
+### 11.3 Package Size Guidance
+
+The application monitors the generated package size and provides warnings:
+- > 50,000 chars (~12,500 tokens): Warning banner suggests using Download instead of clipboard.
+- > 100,000 chars: Copy button disabled with tooltip; Download is the only option.
+
+AI Studio Builder supports file uploads in the prompt interface, so downloading the `.txt` file and uploading it is the recommended workflow for large refactoring sprints.
+
+---
+
+## 12. Appendices
 
 ### Appendix A: Keyboard Shortcuts Summary
 
@@ -868,5 +928,5 @@ Each line is a JSON object:
 
 ---
 
-*End of Normative Implementation Specification for NARE HITL Edition v2.0.0*
+*End of Normative Implementation Specification for NARE HITL Edition v3.0.0*
 ```
