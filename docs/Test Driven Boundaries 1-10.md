@@ -302,4 +302,3 @@ surgery:
   script_language: "bash"
   script_path: "./scripts/build_logs_settings.sh"
 ```
-Once the Unbound Implementer submits the PR via GitHub, remember to execute the `sync()` checks, run the `cargo` verifications locally, and fulfill the Master Builder's Oath.
