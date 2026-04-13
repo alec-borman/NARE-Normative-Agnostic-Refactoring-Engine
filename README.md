@@ -1,7 +1,7 @@
 # NARE: Normative Agnostic Refactoring Engine
 
-[![Specification](https://img.shields.io/badge/Spec-v1.2.0-blue)](./SPEC.md)
-[![Status](https://img.shields.io/badge/Status-Design%20%2F%20Discussion-yellow)](./DISCUSSION.md)
+[![Specification](https://img.shields.io/badge/Spec-v1.2.0-blue)](./docs/SPEC.md)
+[![Status](https://img.shields.io/badge/Status-Design%20%2F%20Discussion-yellow)](./docs/Validation%20and%20Critique%20of%20the%20NARE%201.2.0%20Protocol.md)
 [![License](https://img.shields.io/badge/License-Apache%202.0-green)](./LICENSE)
 
 **A deterministic, specification‑first protocol for autonomous code refactoring in legacy environments.**
@@ -36,15 +36,17 @@ The protocol is **model‑agnostic** and **language‑agnostic**; it defines *ho
 
 ## 📁 Repository Contents
 
-This repository currently hosts the **normative specification and technical validation** of the NARE protocol. It does **not** contain a reference implementation (yet).
+This repository contains the **normative specification, technical validation, and system prompt definitions** for the NARE protocol. It does **not** contain a reference implementation (yet). All primary documents are located in the [`docs/`](./docs) directory.
 
-- **[`SPEC.md`](./SPEC.md)** – The formal NARE v1.2.0 protocol definition, including YAML schemas, phase workflows, and security requirements.
-- **[`ANALYSIS.md`](./ANALYSIS.md)** – A comprehensive critique covering theoretical foundations, long‑context behavior, verification mechanics, and comparative agent analysis.
-- **[`DISCUSSION.md`](./DISCUSSION.md)** – Open issues, limitations, and proposed enhancements for v1.3.0.
+| File | Description |
+| :--- | :--- |
+| [`docs/SPEC.md`](./docs/SPEC.md) | The formal NARE v1.2.0 protocol definition, including YAML schemas, phase workflows, and security requirements. |
+| [`docs/Validation and Critique of the NARE 1.2.0 Protocol: Autonomous Refactoring in the Era of Large Language Models.md`](./docs/Validation%20and%20Critique%20of%20the%20NARE%201.2.0%20Protocol.md) | Comprehensive analysis covering theoretical foundations, long‑context behavior, verification mechanics, and comparative agent evaluation. |
+| [`docs/Implementer-System-Instructions.md`](./docs/Implementer-System-Instructions.md) | System prompt and behavioral guidelines for the NARE **Implementer** agent (responsible for generating Tela Tasks and deterministic mutation scripts). |
+| [`docs/Oracle-System-Instructions.md`](./docs/Oracle-System-Instructions.md) | System prompt and reasoning constraints for the NARE **Oracle** agent (responsible for high‑level intent decomposition and architectural oversight). |
 
 Future milestones may include:
 - Reference implementation of the Actuator (Rust / Python)
-- Planner prompt templates for popular LLMs
 - CI/CD integration examples
 
 ---
@@ -60,9 +62,11 @@ Future milestones may include:
 
 ## 📚 Quick Start (Reading the Spec)
 
-If you are new to NARE, we recommend starting with the **Overview** section of [`SPEC.md`](./SPEC.md) and then reviewing the **Phase‑by‑Phase Workflow** (§4).
+If you are new to NARE, we recommend starting with the **Overview** section of [`docs/SPEC.md`](./docs/SPEC.md) and then reviewing the **Phase‑by‑Phase Workflow** (§4).
 
-For a deeper understanding of the protocol's rationale and performance characteristics, see [`ANALYSIS.md`](./ANALYSIS.md).
+For a deeper understanding of the protocol's rationale and performance characteristics, see the **[Validation and Critique](./docs/Validation%20and%20Critique%20of%20the%20NARE%201.2.0%20Protocol.md)** document.
+
+To understand how AI agents are instructed to behave within the NARE framework, refer to the **System Instructions** for the [Implementer](./docs/Implementer-System-Instructions.md) and the [Oracle](./docs/Oracle-System-Instructions.md).
 
 ---
 
