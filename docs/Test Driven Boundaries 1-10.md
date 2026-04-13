@@ -1,4 +1,46 @@
 ```yaml
+### task.tdb-001-scaffold.tela.yaml
+version: "4.1.0"
+task_id: "tdb-001-scaffold"
+created: "2026-04-13T11:15:06Z"
+master_builder: "Alec Borman"
+intent_summary: "Initialize the Tauri + Rust project scaffold and establish local persistence directory structures."
+target:
+  repository: "nare-hitl-ui"
+  files:
+    - path: "src-tauri/src/main.rs"
+      hash_before: "ACTUATOR_TO_POPULATE"
+    - path: "src-tauri/src/persistence.rs"
+      hash_before: "ACTUATOR_TO_POPULATE"
+    - path: "src-tauri/Cargo.toml"
+      hash_before: "ACTUATOR_TO_POPULATE"
+    - path: "src-tauri/tests/scaffold_tests.rs"
+      hash_before: "ACTUATOR_TO_POPULATE"
+boundary:
+  must:
+    - "Initialize a cross-platform desktop application using the Tauri framework and a Rust backend."
+    - "Create persistence logic to ensure the UI state can be saved to and loaded from ~/.nare/ui_state.json."
+    - "Ensure the backend automatically creates the required local directories on launch, specifically .nare/logs/ and .nare/tasks/active/."
+    - "Create an empty JSONL file for the immutable audit log at .nare/logs/audit.jsonl."
+    - "Write a test suite in scaffold_tests.rs to verify that the required directories and files are successfully created upon initialization."
+  must_not:
+    - "Do not implement frontend UI layout or webview logic at this stage; strictly limit the scope to the Rust backend scaffold and directory initialization."
+    - "Do not use probabilistic file-editing tools directly; output the complete scaffold logic via a deterministic script."
+verification:
+  ast_check:
+    command: "rustfmt --check {file}"
+    expected_exit: 0
+  compiler_check:
+    command: "cargo check --message-format=short"
+    expected_exit: 0
+  behavioral_checks:
+    - name: "verify_persistence_directories"
+      command: "cargo test verify_persistence_directories"
+      expected_exit: 0
+surgery:
+  method: "deterministic_script"
+  script_language: "bash"
+  script_path: "./scripts/scaffold_tauri.sh"```yaml
 ### task.tdb-002-global-shell.tela.yaml
 version: "4.1.0"
 task_id: "tdb-002-global-shell"
